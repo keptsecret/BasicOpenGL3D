@@ -1,34 +1,15 @@
+#include "StencilMain.h"
+
+#include "BasicOpenGL/Shader.h"
+#include "BasicOpenGL/stb_image.h"
+
 #include <glew/glew.h>
-#include <SDL/SDL.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+StencilMain::StencilMain() :
+		camera(Camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f)) {
+}
 
-#include <string>
-#include <iostream>
-
-#include "stb_image.h"
-
-#include "Camera.h"
-#include "Shader.h"
-#include "InputManager.h"
-#include "Model.h"
-
-
-bool run = true;
-bool firstMouse = true;
-
-const int screen_width = 800;
-const int screen_height = 600;
-
-InputManager inputManager;
-Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
-
-void processInput(SDL_Window* window, float deltaTime);
-unsigned int generateTexture(const std::string& filepath);
-
-int main(int argc, char* args[]) {
+int StencilMain::start() {
 	// init SDL
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -77,6 +58,7 @@ int main(int argc, char* args[]) {
 	 */
 
 	Shader shader("./Shaders/testing_shader.vert", "./Shaders/testing_shader.frag");
+	Shader stencilShader("./Shaders/testing_shader.vert", "./Shaders/stencil_shader.frag");
 
 	float cubeVertices[] = {
 		// positions          // texture Coords
@@ -145,7 +127,6 @@ int main(int argc, char* args[]) {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
-	glBindVertexArray(0);
 
 	// plane vertex data
 	unsigned int planeVAO, planeVBO;
@@ -159,7 +140,6 @@ int main(int argc, char* args[]) {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
-	glBindVertexArray(0);
 
 	unsigned int textureMarble = generateTexture("./Textures/marble.jpg");
 	unsigned int textureMetal = generateTexture("./Textures/metal.png");
@@ -178,14 +158,22 @@ int main(int argc, char* args[]) {
 
 		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClearDepth(1.);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glEnable(GL_STENCIL_TEST);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 		glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), static_cast<float>(screen_width) / screen_height, 0.1f, 100.0f);
 		glm::mat4 view = camera.getViewMatrix();
+		stencilShader.use();
+		stencilShader.setMat4("projection", projection);
+		stencilShader.setMat4("view", view);
 
 		shader.use();
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
+
+		// make sure to not draw plane stencil
+		glStencilMask(0x00);
 
 		// draw plane
 		glBindVertexArray(planeVAO);
@@ -193,6 +181,10 @@ int main(int argc, char* args[]) {
 		glBindTexture(GL_TEXTURE_2D, textureMetal);
 		shader.setMat4("model", glm::mat4(1.0f));
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		// set initial mask of cubes
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
 
 		// draw cubes
 		glBindVertexArray(cubeVAO);
@@ -208,6 +200,29 @@ int main(int argc, char* args[]) {
 		shader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		// set mask of outline
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDisable(GL_DEPTH_TEST);
+
+		// draw outlines by scaling the cubes up
+		stencilShader.use();
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(1.1f));
+		stencilShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.1f));
+		stencilShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glEnable(GL_DEPTH_TEST);
+
 		SDL_GL_SwapWindow(sdl_window);
 	}
 
@@ -215,12 +230,7 @@ int main(int argc, char* args[]) {
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-/*
- * Miscellaneous helper functions
- */
-
-void processInput(SDL_Window* window, float deltaTime) {
+void StencilMain::processInput(SDL_Window* window, float deltaTime) {
 	SDL_Event event;
 
 	float xoff, yoff;
@@ -264,7 +274,7 @@ void processInput(SDL_Window* window, float deltaTime) {
 	}
 }
 
-unsigned int generateTexture(const std::string& filepath) {
+unsigned int StencilMain::generateTexture(const std::string& filepath) {
 	// generate texture
 	unsigned int texture;
 	glGenTextures(1, &texture);

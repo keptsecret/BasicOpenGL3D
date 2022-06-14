@@ -42,6 +42,9 @@
     <ClCompile Include="Examples\BasicMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Examples\StencilMain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\basic_shader.frag">
@@ -110,6 +113,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Examples\BasicMain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Examples\StencilMain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

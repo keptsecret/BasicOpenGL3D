@@ -151,6 +151,7 @@
     <ClCompile Include="Examples\BasicMain.cpp" />
     <ClCompile Include="Examples\LightingMain.cpp" />
     <ClCompile Include="Examples\ModelMain.cpp" />
+    <ClCompile Include="Examples\StencilMain.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Examples\BasicMain.h" />
     <ClInclude Include="Examples\LightingMain.h" />
     <ClInclude Include="Examples\ModelMain.h" />
+    <ClInclude Include="Examples\StencilMain.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
